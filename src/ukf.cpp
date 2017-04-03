@@ -72,6 +72,13 @@ UKF::UKF() {
   
   // Initialize predicted sigma points matrix
   Xsig_pred_ = MatrixXd(n_x_, 2 * n_aug_ + 1);
+  
+  // Initialize vector for weights
+  weights_ = VectorXd(2 * n_aug_ + 1);
+  
+  // Set weights
+  weights_.fill(1 / (2 * (lambda_ + n_aug_)));
+  weights_(0) = lambda_ / (lambda_ + n_aug_);
 }
 
 UKF::~UKF() {}
@@ -136,12 +143,14 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
   
   if (meas_package.sensor_type_ == MeasurementPackage::RADAR) {
     // Radar updates
-    if (use_radar_)
+    if (use_radar_) {
       this->UpdateRadar(meas_package);
+    }
   } else {
     // Laser updates
-    if (use_laser_)
+    if (use_laser_) {
       this->UpdateLidar(meas_package);
+    }
   }
 }
 
@@ -151,51 +160,44 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
  * measurement and this one.
  */
 void UKF::Prediction(double delta_t) {
-  /**
-  TODO:
-
-  Complete this function! Estimate the object's location. Modify the state
-  vector, x_. Predict sigma points, the state, and the state covariance matrix.
-  */
-  
   // Step 1: Generate sigma points
   
-  //create sigma point matrix
+  // Create sigma point matrix
   MatrixXd Xsig = MatrixXd(n_x_, 2 * n_x_ + 1);
   
-  //calculate square root of P
+  // Calculate square root of P
   MatrixXd A = P_.llt().matrixL();
   
-  //calculate sigma points ...
-  //set sigma points as columns of matrix Xsig
+  // Calculate sigma points ...
+  // Set sigma points as columns of matrix Xsig
   Xsig.col(0) = x_;
   Xsig.block(0, 1, n_x_, n_x_) = (sqrt(lambda_ + n_x_) * A).colwise() + x_;
   Xsig.block(0, n_x_ + 1, n_x_, n_x_) = (-1 * sqrt(lambda_ + n_x_) * A).colwise() + x_;
   
   // Step 2: Augmentation
   
-  //create augmented mean vector
+  // Create augmented mean vector
   VectorXd x_aug = VectorXd(7);
   
-  //create augmented state covariance
+  // Create augmented state covariance
   MatrixXd P_aug = MatrixXd(7, 7);
   
-  //create sigma point matrix
+  // Create sigma point matrix
   MatrixXd Xsig_aug = MatrixXd(n_aug_, 2 * n_aug_ + 1);
   
-  //create augmented mean state
+  // Create augmented mean state
   x_aug.head(n_x_) = x_;
   x_aug.tail(n_aug_ - n_x_) << 0., 0.;
   
-  //create augmented covariance matrix
+  // Create augmented covariance matrix
   P_aug.topLeftCorner(n_x_, n_x_) = P_;
   P_aug.bottomRightCorner(n_aug_ - n_x_, n_aug_ - n_x_) <<
     pow(std_a_, 2), 0., 0., pow(std_yawdd_, 2);
   
-  //create square root matrix
+  // Create square root matrix
   MatrixXd A_aug = P_aug.llt().matrixL();
   
-  //create augmented sigma points
+  // Create augmented sigma points
   Xsig_aug.col(0) = x_aug;
   Xsig_aug.block(0, 1, n_aug_, n_aug_) =
     (sqrt(lambda_ + n_aug_) * A_aug).colwise() + x_aug;
@@ -206,7 +208,7 @@ void UKF::Prediction(double delta_t) {
   
   for (int i = 0; i < 2 * n_aug_ + 1; i++)
   {
-    //extract values for better readability
+    // Extract values for better readability
     double p_x = Xsig_aug(0, i);
     double p_y = Xsig_aug(1, i);
     double v = Xsig_aug(2, i);
@@ -215,10 +217,10 @@ void UKF::Prediction(double delta_t) {
     double nu_a = Xsig_aug(5, i);
     double nu_yawdd = Xsig_aug(6, i);
     
-    //predicted state values
+    // Predicted state values
     double px_p, py_p;
     
-    //avoid division by zero
+    // Avoid division by zero
     if (fabs(yawd) > 0.001) {
       px_p = p_x + v / yawd * (sin(yaw + yawd * delta_t) - sin(yaw));
       py_p = p_y + v / yawd * (cos(yaw) - cos(yaw + yawd * delta_t));
@@ -232,7 +234,7 @@ void UKF::Prediction(double delta_t) {
     double yaw_p = yaw + yawd * delta_t;
     double yawd_p = yawd;
     
-    //add noise
+    // Add noise
     px_p = px_p + 0.5 * nu_a * delta_t * delta_t * cos(yaw);
     py_p = py_p + 0.5 * nu_a * delta_t * delta_t * sin(yaw);
     v_p = v_p + nu_a * delta_t;
@@ -240,13 +242,22 @@ void UKF::Prediction(double delta_t) {
     yaw_p = yaw_p + 0.5 * nu_yawdd * delta_t * delta_t;
     yawd_p = yawd_p + nu_yawdd * delta_t;
     
-    //write predicted sigma point into right column
+    // Write predicted sigma point into right column
     Xsig_pred_(0,i) = px_p;
     Xsig_pred_(1,i) = py_p;
     Xsig_pred_(2,i) = v_p;
     Xsig_pred_(3,i) = yaw_p;
     Xsig_pred_(4,i) = yawd_p;
   }
+  
+  // Step 4: Predict mean and covariance
+  
+  // Predict state mean
+  x_ = Xsig_pred_ * weights_;
+  
+  // Predict state covariance matrix
+  P_ = (Xsig_pred_.colwise() - x_).cwiseProduct(weights_.transpose().replicate(n_x_, 1)) *
+    (Xsig_pred_.colwise() - x_).transpose();
 }
 
 /**
