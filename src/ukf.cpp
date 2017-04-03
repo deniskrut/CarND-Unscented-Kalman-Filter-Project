@@ -67,6 +67,60 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
   Complete this function! Make sure you switch between lidar and radar
   measurements.
   */
+  
+  
+  /*****************************************************************************
+   *  Initialization
+   ****************************************************************************/
+  if (!is_initialized_) {
+    time_us_ = meas_package.timestamp_;
+    
+    //initialize the state x_ with the first measurement
+    if (meas_package.sensor_type_ == MeasurementPackage::RADAR) {
+      /**
+       Convert radar from polar to cartesian coordinates and initialize state.
+       */
+      double r = meas_package.raw_measurements_[0];
+      double phi = meas_package.raw_measurements_[1];
+      double x = r * cos(phi);
+      double y = r * sin(phi);
+      
+      x_ << x, y, 0, 0, 0;
+    }
+    else if (meas_package.sensor_type_ == MeasurementPackage::LASER) {
+      /**
+       Initialize state.
+       */
+      
+      x_ << meas_package.raw_measurements_[0], meas_package.raw_measurements_[1], 0, 0, 0;
+    }
+    
+    // done initializing, no need to predict or update
+    is_initialized_ = true;
+    return;
+  }
+  
+  /*****************************************************************************
+   *  Prediction
+   ****************************************************************************/
+  
+  //compute the time elapsed between the current and previous measurements
+  double dt = (meas_package.timestamp_ - time_us_) / 1000000.0;	//dt - expressed in seconds
+  time_us_ = meas_package.timestamp_;
+  
+  this->Prediction(dt);
+  
+  /*****************************************************************************
+   *  Update
+   ****************************************************************************/
+  
+  if (meas_package.sensor_type_ == MeasurementPackage::RADAR) {
+    // Radar updates
+    this->UpdateRadar(meas_package);
+  } else {
+    // Laser updates
+    this->UpdateLidar(meas_package);
+  }
 }
 
 /**
