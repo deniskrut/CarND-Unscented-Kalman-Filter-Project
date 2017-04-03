@@ -8,13 +8,19 @@ using Eigen::MatrixXd;
 using Eigen::VectorXd;
 using std::vector;
 
-static const int n_x = 5;
-static constexpr double lambda = 3 - n_x;
-
 /**
  * Initializes Unscented Kalman filter
  */
 UKF::UKF() {
+  // Assign size of the state vector
+  n_x_ = 5;
+  
+  // Assign size of the augmented state vector
+  n_aug_ = 7;
+  
+  // Assign the lambda parameter for the sigma points generation
+  lambda_ = 3 - n_x_;
+  
   // if this is false, laser measurements will be ignored (except during init)
   use_laser_ = true;
 
@@ -22,10 +28,10 @@ UKF::UKF() {
   use_radar_ = true;
 
   // initial state vector
-  x_ = VectorXd(n_x);
+  x_ = VectorXd(n_x_);
 
   // initial covariance matrix
-  P_ = MatrixXd(n_x, n_x);
+  P_ = MatrixXd(n_x_, n_x_);
 
   // Process noise standard deviation longitudinal acceleration in m/s^2
   std_a_ = 30;
@@ -56,6 +62,7 @@ UKF::UKF() {
   Hint: one or more values initialized above might be wildly off...
   */
   
+  // Assign initial covariance matrix
   P_ <<
     100, 0,     0,     0,     0,
     0, 100,     0,     0,     0,
@@ -63,7 +70,8 @@ UKF::UKF() {
     0,   0,     0, 10000,     0,
     0,   0,     0,     0, 10000;
   
-  Xsig_pred_ = MatrixXd(n_x, 2 * n_x + 1);
+  // Initialize predicted sigma points matrix
+  Xsig_pred_ = MatrixXd(n_x_, 2 * n_x_ + 1);
 }
 
 UKF::~UKF() {}
@@ -153,7 +161,7 @@ void UKF::Prediction(double delta_t) {
   // Step 1: Generate sigma points
   
   //create sigma point matrix
-  MatrixXd Xsig = MatrixXd(n_x, 2 * n_x + 1);
+  MatrixXd Xsig = MatrixXd(n_x_, 2 * n_x_ + 1);
   
   //calculate square root of P
   MatrixXd A = P_.llt().matrixL();
@@ -161,8 +169,38 @@ void UKF::Prediction(double delta_t) {
   //calculate sigma points ...
   //set sigma points as columns of matrix Xsig
   Xsig.col(0) = x_;
-  Xsig.block(0, 1, n_x, n_x) = (sqrt(lambda + n_x) * A).colwise() + x_;
-  Xsig.block(0, n_x + 1, n_x, n_x) = (-1 * sqrt(lambda + n_x) * A).colwise() + x_;
+  Xsig.block(0, 1, n_x_, n_x_) = (sqrt(lambda_ + n_x_) * A).colwise() + x_;
+  Xsig.block(0, n_x_ + 1, n_x_, n_x_) = (-1 * sqrt(lambda_ + n_x_) * A).colwise() + x_;
+  
+  // Step 2: Augmentation
+  
+  //create augmented mean vector
+  VectorXd x_aug = VectorXd(7);
+  
+  //create augmented state covariance
+  MatrixXd P_aug = MatrixXd(7, 7);
+  
+  //create sigma point matrix
+  MatrixXd Xsig_aug = MatrixXd(n_aug_, 2 * n_aug_ + 1);
+  
+  //create augmented mean state
+  x_aug.head(n_x_) = x_;
+  x_aug.tail(n_aug_ - n_x_) << 0., 0.;
+  
+  //create augmented covariance matrix
+  P_aug.topLeftCorner(n_x_, n_x_) = P_;
+  P_aug.bottomRightCorner(n_aug_ - n_x_, n_aug_ - n_x_) <<
+    pow(std_a_, 2), 0., 0., pow(std_yawdd_, 2);
+  
+  //create square root matrix
+  MatrixXd A_aug = P_aug.llt().matrixL();
+  
+  //create augmented sigma points
+  Xsig_aug.col(0) = x_aug;
+  Xsig_aug.block(0, 1, n_aug_, n_aug_) =
+    (sqrt(lambda_ + n_aug_) * A_aug).colwise() + x_aug;
+  Xsig_aug.block(0, n_aug_ + 1, n_aug_, n_aug_) =
+    (-1 * sqrt(lambda_ + n_aug_) * A_aug).colwise() + x_aug;
 }
 
 /**
