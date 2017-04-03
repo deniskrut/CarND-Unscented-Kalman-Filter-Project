@@ -8,6 +8,9 @@ using Eigen::MatrixXd;
 using Eigen::VectorXd;
 using std::vector;
 
+static const int n_x = 5;
+static constexpr double lambda = 3 - n_x;
+
 /**
  * Initializes Unscented Kalman filter
  */
@@ -19,10 +22,10 @@ UKF::UKF() {
   use_radar_ = true;
 
   // initial state vector
-  x_ = VectorXd(5);
+  x_ = VectorXd(n_x);
 
   // initial covariance matrix
-  P_ = MatrixXd(5, 5);
+  P_ = MatrixXd(n_x, n_x);
 
   // Process noise standard deviation longitudinal acceleration in m/s^2
   std_a_ = 30;
@@ -59,6 +62,8 @@ UKF::UKF() {
     0,   0, 10000,     0,     0,
     0,   0,     0, 10000,     0,
     0,   0,     0,     0, 10000;
+  
+  Xsig_pred_ = MatrixXd(n_x, 2 * n_x + 1);
 }
 
 UKF::~UKF() {}
@@ -145,7 +150,19 @@ void UKF::Prediction(double delta_t) {
   vector, x_. Predict sigma points, the state, and the state covariance matrix.
   */
   
+  // Step 1: Generate sigma points
   
+  //create sigma point matrix
+  MatrixXd Xsig = MatrixXd(n_x, 2 * n_x + 1);
+  
+  //calculate square root of P
+  MatrixXd A = P_.llt().matrixL();
+  
+  //calculate sigma points ...
+  //set sigma points as columns of matrix Xsig
+  Xsig.col(0) = x_;
+  Xsig.block(0, 1, n_x, n_x) = (sqrt(lambda + n_x) * A).colwise() + x_;
+  Xsig.block(0, n_x + 1, n_x, n_x) = (-1 * sqrt(lambda + n_x) * A).colwise() + x_;
 }
 
 /**
