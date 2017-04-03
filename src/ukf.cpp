@@ -52,6 +52,13 @@ UKF::UKF() {
 
   Hint: one or more values initialized above might be wildly off...
   */
+  
+  P_ <<
+    100, 0,     0,     0,     0,
+    0, 100,     0,     0,     0,
+    0,   0, 10000,     0,     0,
+    0,   0,     0, 10000,     0,
+    0,   0,     0,     0, 10000;
 }
 
 UKF::~UKF() {}
@@ -137,6 +144,8 @@ void UKF::Prediction(double delta_t) {
   Complete this function! Estimate the object's location. Modify the state
   vector, x_. Predict sigma points, the state, and the state covariance matrix.
   */
+  
+  
 }
 
 /**
