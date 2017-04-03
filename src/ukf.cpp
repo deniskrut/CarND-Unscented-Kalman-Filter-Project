@@ -288,4 +288,35 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
 
   You'll also need to calculate the radar NIS.
   */
+  
+  // Set measurement dimension, radar can measure r, phi, and r_dot
+  const int n_z = 3;
+  
+  // Create matrix for sigma points in measurement space
+  MatrixXd Zsig = MatrixXd(n_z, 2 * n_aug_ + 1);
+
+  VectorXd px = Xsig_pred_.row(0);
+  VectorXd py = Xsig_pred_.row(1);
+  VectorXd v = Xsig_pred_.row(2);
+  VectorXd yaw = Xsig_pred_.row(3);
+    
+  Zsig.row(0) = (px.array().pow(2) + px.array().pow(2)).sqrt();
+  Zsig.row(1) = (py.array() / px.array()).atan();
+  Zsig.row(2) = (px.array() * yaw.array().cos() * v.array() + py.array() * yaw.array().sin() * v.array()) / (px.array().pow(2) + py.array().pow(2)).sqrt();
+  
+  // Mean predicted measurement
+  VectorXd z_pred = VectorXd(n_z);
+  
+  // Calculate mean predicted measurement
+  z_pred = Zsig * weights_;
+  
+  // Calculate measurement covariance matrix S
+  MatrixXd R = MatrixXd(n_z, n_z);
+  R <<
+    pow(std_radr_, 2), 0.,                  0.,
+    0.,                pow(std_radphi_, 2), 0.,
+    0.,                0.,                  pow(std_radrd_, 2);
+  MatrixXd S = MatrixXd(n_z, n_z);
+  S = (Zsig.colwise() - z_pred).cwiseProduct(weights_.transpose().replicate(n_z, 1)) *
+    (Zsig.colwise() - z_pred).transpose() + R;
 }
