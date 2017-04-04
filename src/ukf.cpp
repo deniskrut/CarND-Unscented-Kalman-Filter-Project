@@ -244,10 +244,8 @@ void UKF::Prediction(double delta_t) {
   MatrixXd x_diff = Xsig_pred_.colwise() - x_;
   for (int i = 0; i < x_diff.cols(); i++)
   {
-    while (x_diff(3, i) > M_PI)
-      x_diff(3, i) -= 2 * M_PI;
-    while (x_diff(3, i) < -M_PI)
-      x_diff(3, i) += 2 * M_PI;
+    double angle = x_diff(3, i);
+    x_diff(3, i) = atan2(sin(angle), cos(angle));
   }
   
   // Predict state covariance matrix
@@ -310,8 +308,15 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
 
   ArrayXd sqrt_px_2_plus_py_2 = (px.pow(2) + py.pow(2)).sqrt();
   Zsig.row(0) = sqrt_px_2_plus_py_2;
-  // TODO: Replace with atan2 to correctly calculate the quadrant
-  Zsig.row(1) = (py / px).atan();
+  // TODO: Replace with more efficient atan2 implementation
+  for (int i = 0; i < 2 * n_aug_ + 1; i++) {  //2n+1 simga points
+    // extract values for better readibility
+    double p_x = Xsig_pred_(0,i);
+    double p_y = Xsig_pred_(1,i);
+    
+    // measurement model
+    Zsig(1, i) = atan2(p_y, p_x); //phi
+  }
   Zsig.row(2) = (px * yaw.cos() * v + py * yaw.sin() * v) / sqrt_px_2_plus_py_2;
   
   // Mean predicted measurement
@@ -330,10 +335,8 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
   MatrixXd z_diff = Zsig.colwise() - z_pred;
   for (int i = 0; i < z_diff.cols(); i++)
   {
-    while (z_diff(1, i) > M_PI)
-      z_diff(1, i) -= 2 * M_PI;
-    while (z_diff(1, i) < -M_PI)
-      z_diff(1, i) += 2 * M_PI;
+    double angle = z_diff(1, i);
+    z_diff(1, i) = atan2(sin(angle), cos(angle));
   }
   
   // Calculate measurement covariance matrix S
@@ -345,10 +348,8 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
   MatrixXd x_diff = Xsig_pred_.colwise() - x_;
   for (int i = 0; i < x_diff.cols(); i++)
   {
-    while (x_diff(3, i) > M_PI)
-      x_diff(3, i) -= 2 * M_PI;
-    while (x_diff(3, i) < -M_PI)
-      x_diff(3, i) += 2 * M_PI;
+    double angle = x_diff(3, i);
+    x_diff(3, i) = atan2(sin(angle), cos(angle));
   }
   
   // Calculate cross correlation matrix
