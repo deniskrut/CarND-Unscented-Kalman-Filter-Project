@@ -298,7 +298,7 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
   ArrayXd v = Xsig_pred_.row(2).array();
   ArrayXd yaw = Xsig_pred_.row(3).array();
     
-  Zsig.row(0) = (px.pow(2) + px.pow(2)).sqrt();
+  Zsig.row(0) = (px.pow(2) + py.pow(2)).sqrt();
   Zsig.row(1) = (py / px).atan();
   Zsig.row(2) = (px * yaw.cos() * v + py * yaw.sin() * v) / (px.pow(2) + py.pow(2)).sqrt();
   
