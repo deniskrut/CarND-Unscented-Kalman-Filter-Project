@@ -301,6 +301,7 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
 
   ArrayXd sqrt_px_2_plus_py_2 = (px.pow(2) + py.pow(2)).sqrt();
   Zsig.row(0) = sqrt_px_2_plus_py_2;
+  // TODO: Replace with atan2 to correctly calculate the quadrant
   Zsig.row(1) = (py / px).atan();
   Zsig.row(2) = (px * yaw.cos() * v + py * yaw.sin() * v) / sqrt_px_2_plus_py_2;
   
