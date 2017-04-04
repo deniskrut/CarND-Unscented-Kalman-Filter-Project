@@ -240,10 +240,19 @@ void UKF::Prediction(double delta_t) {
   // Predict state mean
   x_ = Xsig_pred_ * weights_;
   
-  // TODO: Normalize angle for Xsig_pred - x (3)
+  // TODO: Perform more efficient angle normalization for Xsig_pred - x (3)
+  MatrixXd x_diff = Xsig_pred_.colwise() - x_;
+  for (int i = 0; i < x_diff.cols(); i++)
+  {
+    while (x_diff(3, i) > M_PI)
+      x_diff(3, i) -= 2 * M_PI;
+    while (x_diff(3, i) < -M_PI)
+      x_diff(3, i) += 2 * M_PI;
+  }
+  
   // Predict state covariance matrix
-  P_ = (Xsig_pred_.colwise() - x_).cwiseProduct(weights_.transpose().replicate(n_x_, 1)) *
-    (Xsig_pred_.colwise() - x_).transpose();
+  P_ = x_diff.cwiseProduct(weights_.transpose().replicate(n_x_, 1)) *
+    x_diff.transpose();
 }
 
 /**
@@ -317,16 +326,34 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
     0.,                pow(std_radphi_, 2), 0.,
     0.,                0.,                  pow(std_radrd_, 2);
   
-  // TODO: Normalize angle for Zsig - z_pred (1)
+  // TODO: Perform more efficient angle normalization for Zsig - z_pred (1)
+  MatrixXd z_diff = Zsig.colwise() - z_pred;
+  for (int i = 0; i < z_diff.cols(); i++)
+  {
+    while (z_diff(1, i) > M_PI)
+      z_diff(1, i) -= 2 * M_PI;
+    while (z_diff(1, i) < -M_PI)
+      z_diff(1, i) += 2 * M_PI;
+  }
+  
   // Calculate measurement covariance matrix S
   MatrixXd S = MatrixXd(n_z, n_z);
-  S = (Zsig.colwise() - z_pred).cwiseProduct(weights_.transpose().replicate(n_z, 1)) *
-    (Zsig.colwise() - z_pred).transpose() + R;
+  S = z_diff.cwiseProduct(weights_.transpose().replicate(n_z, 1)) *
+    z_diff.transpose() + R;
   
-  // TODO: Normalize angle for Zsig - z_pred (1) and Xsig_pred - x (3)
+  // TODO: Perform more efficient angle normalization for Xsig_pred - x (3)
+  MatrixXd x_diff = Xsig_pred_.colwise() - x_;
+  for (int i = 0; i < x_diff.cols(); i++)
+  {
+    while (x_diff(3, i) > M_PI)
+      x_diff(3, i) -= 2 * M_PI;
+    while (x_diff(3, i) < -M_PI)
+      x_diff(3, i) += 2 * M_PI;
+  }
+  
   // Calculate cross correlation matrix
-  MatrixXd Tc = (Xsig_pred_.colwise() - x_).cwiseProduct(weights_.transpose().replicate(n_x_, 1)) *
-    (Zsig.colwise() - z_pred).transpose();
+  MatrixXd Tc = x_diff.cwiseProduct(weights_.transpose().replicate(n_x_, 1)) *
+    z_diff.transpose();
   
   // Calculate Kalman gain K;
   MatrixXd K = MatrixXd(n_x_, n_z);
