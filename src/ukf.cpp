@@ -4,6 +4,8 @@
 #include <iostream>
 
 using namespace std;
+using Eigen::Array;
+using Eigen::ArrayXd;
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
 using std::vector;
@@ -206,49 +208,45 @@ void UKF::Prediction(double delta_t) {
   
   // Step 3: Predit sigma points
   
-  for (int i = 0; i < 2 * n_aug_ + 1; i++)
-  {
-    // Extract values for better readability
-    double p_x = Xsig_aug(0, i);
-    double p_y = Xsig_aug(1, i);
-    double v = Xsig_aug(2, i);
-    double yaw = Xsig_aug(3, i);
-    double yawd = Xsig_aug(4, i);
-    double nu_a = Xsig_aug(5, i);
-    double nu_yawdd = Xsig_aug(6, i);
+  // Extract values for better readability
+  ArrayXd p_x = Xsig_aug.row(0).array();
+  ArrayXd p_y = Xsig_aug.row(1).array();
+  ArrayXd v = Xsig_aug.row(2).array();
+  ArrayXd yaw = Xsig_aug.row(3).array();
+  ArrayXd yawd = Xsig_aug.row(4).array();
+  ArrayXd nu_a = Xsig_aug.row(5).array();
+  ArrayXd nu_yawdd = Xsig_aug.row(6).array();
     
-    // Predicted state values
-    double px_p, py_p;
+  // Predicted state values
+  ArrayXd px_p, py_p;
     
-    // Avoid division by zero
-    if (fabs(yawd) > 0.001) {
-      px_p = p_x + v / yawd * (sin(yaw + yawd * delta_t) - sin(yaw));
-      py_p = p_y + v / yawd * (cos(yaw) - cos(yaw + yawd * delta_t));
-    }
-    else {
-      px_p = p_x + v * delta_t * cos(yaw);
-      py_p = p_y + v * delta_t * sin(yaw);
-    }
+  // Avoid division by zero
+  Array<bool, -1, -1> yaw_is_not_zero = yawd.abs() > 0.001;
+  px_p = (yaw_is_not_zero).select(
+    p_x + v / yawd * ((yaw + yawd * delta_t).sin() - yaw.sin()),
+    p_x + v * delta_t * yaw.cos());
+  py_p = (yaw_is_not_zero).select(
+    p_x + v / yawd * (yaw.cos() - (yaw + yawd * delta_t).cos()),
+    p_x + v * delta_t * yaw.sin());
     
-    double v_p = v;
-    double yaw_p = yaw + yawd * delta_t;
-    double yawd_p = yawd;
+  ArrayXd v_p = v;
+  ArrayXd yaw_p = yaw + yawd * delta_t;
+  ArrayXd yawd_p = yawd;
+  
+  // Add noise
+  px_p = px_p + 0.5 * nu_a * delta_t * delta_t * yaw.cos();
+  py_p = py_p + 0.5 * nu_a * delta_t * delta_t * yaw.sin();
+  v_p = v_p + nu_a * delta_t;
     
-    // Add noise
-    px_p = px_p + 0.5 * nu_a * delta_t * delta_t * cos(yaw);
-    py_p = py_p + 0.5 * nu_a * delta_t * delta_t * sin(yaw);
-    v_p = v_p + nu_a * delta_t;
+  yaw_p = yaw_p + 0.5 * nu_yawdd * delta_t * delta_t;
+  yawd_p = yawd_p + nu_yawdd * delta_t;
     
-    yaw_p = yaw_p + 0.5 * nu_yawdd * delta_t * delta_t;
-    yawd_p = yawd_p + nu_yawdd * delta_t;
-    
-    // Write predicted sigma point into right column
-    Xsig_pred_(0,i) = px_p;
-    Xsig_pred_(1,i) = py_p;
-    Xsig_pred_(2,i) = v_p;
-    Xsig_pred_(3,i) = yaw_p;
-    Xsig_pred_(4,i) = yawd_p;
-  }
+  // Write predicted sigma point into right column
+  Xsig_pred_.row(0) = px_p;
+  Xsig_pred_.row(1) = py_p;
+  Xsig_pred_.row(2) = v_p;
+  Xsig_pred_.row(3) = yaw_p;
+  Xsig_pred_.row(4) = yawd_p;
   
   // Step 4: Predict mean and covariance
   
@@ -295,14 +293,14 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
   // Create matrix for sigma points in measurement space
   MatrixXd Zsig = MatrixXd(n_z, 2 * n_aug_ + 1);
 
-  VectorXd px = Xsig_pred_.row(0);
-  VectorXd py = Xsig_pred_.row(1);
-  VectorXd v = Xsig_pred_.row(2);
-  VectorXd yaw = Xsig_pred_.row(3);
+  ArrayXd px = Xsig_pred_.row(0).array();
+  ArrayXd py = Xsig_pred_.row(1).array();
+  ArrayXd v = Xsig_pred_.row(2).array();
+  ArrayXd yaw = Xsig_pred_.row(3).array();
     
-  Zsig.row(0) = (px.array().pow(2) + px.array().pow(2)).sqrt();
-  Zsig.row(1) = (py.array() / px.array()).atan();
-  Zsig.row(2) = (px.array() * yaw.array().cos() * v.array() + py.array() * yaw.array().sin() * v.array()) / (px.array().pow(2) + py.array().pow(2)).sqrt();
+  Zsig.row(0) = (px.pow(2) + px.pow(2)).sqrt();
+  Zsig.row(1) = (py / px).atan();
+  Zsig.row(2) = (px * yaw.cos() * v + py * yaw.sin() * v) / (px.pow(2) + py.pow(2)).sqrt();
   
   // Mean predicted measurement
   VectorXd z_pred = VectorXd(n_z);
