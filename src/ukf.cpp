@@ -208,11 +208,11 @@ void UKF::Prediction(double delta_t) {
   ArrayXd px_p, py_p;
     
   // Avoid division by zero
-  Array<bool, -1, -1> yaw_is_not_zero = yawd.abs() > 0.001;
-  px_p = (yaw_is_not_zero).select(
+  Array<bool, -1, -1> yawd_is_not_zero = yawd.abs() > 0.001;
+  px_p = (yawd_is_not_zero).select(
     p_x + v / yawd * ((yaw + yawd * delta_t).sin() - yaw.sin()),
     p_x + v * delta_t * yaw.cos());
-  py_p = (yaw_is_not_zero).select(
+  py_p = (yawd_is_not_zero).select(
     p_y + v / yawd * (yaw.cos() - (yaw + yawd * delta_t).cos()),
     p_y + v * delta_t * yaw.sin());
     
