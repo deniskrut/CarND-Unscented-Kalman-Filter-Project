@@ -327,7 +327,8 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
     // Measurement model
     Zsig(1, i) = atan2(p_y, p_x); //phi
   }
-  Zsig.row(2) = (px * yaw.cos() * v + py * yaw.sin() * v) / sqrt_px_2_plus_py_2;
+  // Avoid division by zero by replacing zero with a small number
+  Zsig.row(2) = (px * yaw.cos() * v + py * yaw.sin() * v) / sqrt_px_2_plus_py_2.max(0.0001);
   
   // Mean predicted measurement
   VectorXd z_pred = VectorXd(n_z);
