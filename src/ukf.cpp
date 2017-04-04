@@ -61,11 +61,11 @@ UKF::UKF() {
   
   // Assign initial covariance matrix
   P_ <<
-    100, 0,     0,     0,     0,
-    0, 100,     0,     0,     0,
-    0,   0, 10000,     0,     0,
-    0,   0,     0, 10000,     0,
-    0,   0,     0,     0, 10000;
+    50, 0,   0,            0,              0,
+    0, 50,   0,            0,              0,
+    0,  0, 100,            0,              0,
+    0,  0,   0, pow(M_PI, 2),              0,
+    0,  0,   0,            0, pow(M_PI_2, 2);
   
   // Initialize predicted sigma points matrix
   Xsig_pred_ = MatrixXd(n_x_, 2 * n_aug_ + 1);
