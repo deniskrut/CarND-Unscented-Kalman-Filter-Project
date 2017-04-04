@@ -240,6 +240,7 @@ void UKF::Prediction(double delta_t) {
   // Predict state mean
   x_ = Xsig_pred_ * weights_;
   
+  // TODO: Normalize angle for Xsig_pred - x (3)
   // Predict state covariance matrix
   P_ = (Xsig_pred_.colwise() - x_).cwiseProduct(weights_.transpose().replicate(n_x_, 1)) *
     (Xsig_pred_.colwise() - x_).transpose();
@@ -315,11 +316,13 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
     0.,                pow(std_radphi_, 2), 0.,
     0.,                0.,                  pow(std_radrd_, 2);
   
+  // TODO: Normalize angle for Zsig - z_pred (1)
   // Calculate measurement covariance matrix S
   MatrixXd S = MatrixXd(n_z, n_z);
   S = (Zsig.colwise() - z_pred).cwiseProduct(weights_.transpose().replicate(n_z, 1)) *
     (Zsig.colwise() - z_pred).transpose() + R;
   
+  // TODO: Normalize angle for Zsig - z_pred (1) and Xsig_pred - x (3)
   // Calculate cross correlation matrix
   MatrixXd Tc = (Xsig_pred_.colwise() - x_).cwiseProduct(weights_.transpose().replicate(n_x_, 1)) *
     (Zsig.colwise() - z_pred).transpose();
