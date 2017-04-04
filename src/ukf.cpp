@@ -263,15 +263,6 @@ void UKF::Prediction(double delta_t) {
  * @param {MeasurementPackage} meas_package
  */
 void UKF::UpdateLidar(MeasurementPackage meas_package) {
-  /**
-  TODO:
-
-  Complete this function! Use lidar data to update the belief about the object's
-  position. Modify the state vector, x_, and covariance, P_.
-
-  You'll also need to calculate the lidar NIS.
-  */
-  
   MatrixXd H_laser = MatrixXd(2, n_x_);
   H_laser <<
     1, 0, 0, 0, 0,
@@ -286,7 +277,6 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
   // New value from the measurement
   VectorXd z = meas_package.raw_measurements_;
   
-  
   VectorXd z_pred = H_laser * x_;
   VectorXd y = z - z_pred;
   MatrixXd Ht = H_laser.transpose();
@@ -300,6 +290,9 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
   long x_size = x_.size();
   MatrixXd I = MatrixXd::Identity(x_size, x_size);
   P_ = (I - K * H_laser) * P_;
+  
+  NIS_laser_ = (z - z_pred).transpose() * S.inverse() *
+  (z - z_pred);
 }
 
 /**
@@ -307,15 +300,6 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
  * @param {MeasurementPackage} meas_package
  */
 void UKF::UpdateRadar(MeasurementPackage meas_package) {
-  /**
-  TODO:
-
-  Complete this function! Use radar data to update the belief about the object's
-  position. Modify the state vector, x_, and covariance, P_.
-
-  You'll also need to calculate the radar NIS.
-  */
-  
   // Set measurement dimension, radar can measure r, phi, and r_dot
   const int n_z = 3;
   
@@ -337,12 +321,13 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
   // Calculate mean predicted measurement
   z_pred = Zsig * weights_;
   
-  // Calculate measurement covariance matrix S
   MatrixXd R = MatrixXd(n_z, n_z);
   R <<
     pow(std_radr_, 2), 0.,                  0.,
     0.,                pow(std_radphi_, 2), 0.,
     0.,                0.,                  pow(std_radrd_, 2);
+  
+  // Calculate measurement covariance matrix S
   MatrixXd S = MatrixXd(n_z, n_z);
   S = (Zsig.colwise() - z_pred).cwiseProduct(weights_.transpose().replicate(n_z, 1)) *
     (Zsig.colwise() - z_pred).transpose() + R;
@@ -359,4 +344,7 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
   VectorXd z = meas_package.raw_measurements_;
   x_ = x_ + K * (z - z_pred);
   P_ = P_ - K * S * K.transpose();
+  
+  NIS_radar_ = (z - z_pred).transpose() * S.inverse() *
+  (z - z_pred);
 }
