@@ -14,6 +14,9 @@ using std::vector;
  * Initializes Unscented Kalman filter
  */
 UKF::UKF() {
+  // Mark object as not initialized
+  is_initialized_ = false;
+  
   // Assign size of the state vector
   n_x_ = 5;
   
@@ -210,8 +213,8 @@ void UKF::Prediction(double delta_t) {
     p_x + v / yawd * ((yaw + yawd * delta_t).sin() - yaw.sin()),
     p_x + v * delta_t * yaw.cos());
   py_p = (yaw_is_not_zero).select(
-    p_x + v / yawd * (yaw.cos() - (yaw + yawd * delta_t).cos()),
-    p_x + v * delta_t * yaw.sin());
+    p_y + v / yawd * (yaw.cos() - (yaw + yawd * delta_t).cos()),
+    p_y + v * delta_t * yaw.sin());
     
   ArrayXd v_p = v;
   ArrayXd yaw_p = yaw + yawd * delta_t;
