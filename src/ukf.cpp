@@ -10,6 +10,11 @@ using Eigen::MatrixXd;
 using Eigen::VectorXd;
 using std::vector;
 
+static double normalizeAngle(double angle)
+{
+  return atan2(sin(angle), cos(angle));
+}
+
 /**
  * Initializes Unscented Kalman filter
  */
@@ -240,12 +245,14 @@ void UKF::Prediction(double delta_t) {
   // Predict state mean
   x_ = Xsig_pred_ * weights_;
   
-  // TODO: Perform more efficient angle normalization for Xsig_pred - x (3)
+  x_(3) = normalizeAngle(x_(3));
+  
   MatrixXd x_diff = Xsig_pred_.colwise() - x_;
+  
+  // TODO: Perform more efficient angle normalization
   for (int i = 0; i < x_diff.cols(); i++)
   {
-    double angle = x_diff(3, i);
-    x_diff(3, i) = atan2(sin(angle), cos(angle));
+    x_diff(3, i) = normalizeAngle(x_diff(3, i));
   }
   
   // Predict state covariance matrix
@@ -282,6 +289,9 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
   
   // New estimate
   x_ = x_ + (K * y);
+  
+  x_(3) = normalizeAngle(x_(3));
+  
   long x_size = x_.size();
   MatrixXd I = MatrixXd::Identity(x_size, x_size);
   P_ = (I - K * H_laser) * P_;
@@ -309,12 +319,12 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
   ArrayXd sqrt_px_2_plus_py_2 = (px.pow(2) + py.pow(2)).sqrt();
   Zsig.row(0) = sqrt_px_2_plus_py_2;
   // TODO: Replace with more efficient atan2 implementation
-  for (int i = 0; i < 2 * n_aug_ + 1; i++) {  //2n+1 simga points
-    // extract values for better readibility
+  for (int i = 0; i < 2 * n_aug_ + 1; i++) {  // 2n+1 simga points
+    // Extract values for better readibility
     double p_x = Xsig_pred_(0,i);
     double p_y = Xsig_pred_(1,i);
     
-    // measurement model
+    // Measurement model
     Zsig(1, i) = atan2(p_y, p_x); //phi
   }
   Zsig.row(2) = (px * yaw.cos() * v + py * yaw.sin() * v) / sqrt_px_2_plus_py_2;
@@ -335,8 +345,7 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
   MatrixXd z_diff = Zsig.colwise() - z_pred;
   for (int i = 0; i < z_diff.cols(); i++)
   {
-    double angle = z_diff(1, i);
-    z_diff(1, i) = atan2(sin(angle), cos(angle));
+    z_diff(1, i) = normalizeAngle(z_diff(1, i));
   }
   
   // Calculate measurement covariance matrix S
@@ -348,8 +357,7 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
   MatrixXd x_diff = Xsig_pred_.colwise() - x_;
   for (int i = 0; i < x_diff.cols(); i++)
   {
-    double angle = x_diff(3, i);
-    x_diff(3, i) = atan2(sin(angle), cos(angle));
+    x_diff(3, i) = normalizeAngle(x_diff(3, i));
   }
   
   // Calculate cross correlation matrix
@@ -364,6 +372,8 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
   VectorXd z = meas_package.raw_measurements_;
   x_ = x_ + K * (z - z_pred);
   P_ = P_ - K * S * K.transpose();
+  
+  x_(3) = normalizeAngle(x_(3));
   
   NIS_radar_ = (z - z_pred).transpose() * S.inverse() *
   (z - z_pred);
