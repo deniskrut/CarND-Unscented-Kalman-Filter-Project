@@ -265,39 +265,61 @@ void UKF::Prediction(double delta_t) {
  * @param {MeasurementPackage} meas_package
  */
 void UKF::UpdateLidar(MeasurementPackage meas_package) {
+  // Set measurement dimension, lidar can measure x and y
+  const int n_z = 2;
+  
   MatrixXd H_laser = MatrixXd(2, n_x_);
   H_laser <<
     1, 0, 0, 0, 0,
     0, 1, 0, 0, 0;
   
+  // Matrix for sigma points in measurement space
+  MatrixXd Zsig = H_laser * Xsig_pred_;
+  
   // Measurement covariance matrix for laser
   MatrixXd R_laser = MatrixXd(2, 2);
   R_laser <<
-    pow(std_laspx_, 2),                  0,
-    0,                  pow(std_laspy_, 2);
+  pow(std_laspx_, 2),                  0,
+  0,                  pow(std_laspy_, 2);
   
-  // New value from the measurement
+  // Calculate mean predicted measurement
+  VectorXd z_pred = Zsig * weights_;
+  
+  // Calculate differences between sigma points
+  // and mean predicted measurement in measurement space
+  MatrixXd z_diff = Zsig.colwise() - z_pred;
+  
+  // Calculate measurement covariance matrix S
+  MatrixXd S = MatrixXd(n_z, n_z);
+  S = z_diff.cwiseProduct(weights_.transpose().replicate(n_z, 1)) *
+  z_diff.transpose() + R_laser;
+  
+  // Calculate differences between sigma points
+  // and predicted measurement
+  MatrixXd x_diff = Xsig_pred_.colwise() - x_;
+  for (int i = 0; i < x_diff.cols(); i++)
+  {
+    // TODO: Perform more efficient angle normalization for Xsig_pred - x (3)
+    x_diff(3, i) = normalizeAngle(x_diff(3, i));
+  }
+  
+  // Calculate cross correlation matrix
+  MatrixXd Tc = x_diff.cwiseProduct(weights_.transpose().replicate(n_x_, 1)) *
+  z_diff.transpose();
+  
+  // Calculate Kalman gain K;
+  MatrixXd K = MatrixXd(n_x_, n_z);
+  K = Tc * S.inverse();
+  
+  // Update state mean and covariance matrix
   VectorXd z = meas_package.raw_measurements_;
-  
-  VectorXd z_pred = H_laser * x_;
-  VectorXd y = z - z_pred;
-  MatrixXd Ht = H_laser.transpose();
-  MatrixXd S = H_laser * P_ * Ht + R_laser;
-  MatrixXd Si = S.inverse();
-  MatrixXd PHt = P_ * Ht;
-  MatrixXd K = PHt * Si;
-  
-  // New estimate
-  x_ = x_ + (K * y);
+  x_ = x_ + K * (z - z_pred);
+  P_ = P_ - K * S * K.transpose();
   
   x_(3) = normalizeAngle(x_(3));
   
-  long x_size = x_.size();
-  MatrixXd I = MatrixXd::Identity(x_size, x_size);
-  P_ = (I - K * H_laser) * P_;
-  
   NIS_laser_ = (z - z_pred).transpose() * S.inverse() *
-  (z - z_pred);
+    (z - z_pred);
 }
 
 /**
@@ -336,28 +358,28 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
   // Calculate mean predicted measurement
   z_pred = Zsig * weights_;
   
-  MatrixXd R = MatrixXd(n_z, n_z);
-  R <<
+  MatrixXd R_radar = MatrixXd(n_z, n_z);
+  R_radar <<
     pow(std_radr_, 2), 0.,                  0.,
     0.,                pow(std_radphi_, 2), 0.,
     0.,                0.,                  pow(std_radrd_, 2);
   
-  // TODO: Perform more efficient angle normalization for Zsig - z_pred (1)
   MatrixXd z_diff = Zsig.colwise() - z_pred;
   for (int i = 0; i < z_diff.cols(); i++)
   {
+    // TODO: Perform more efficient angle normalization for Zsig - z_pred (1)
     z_diff(1, i) = normalizeAngle(z_diff(1, i));
   }
   
   // Calculate measurement covariance matrix S
   MatrixXd S = MatrixXd(n_z, n_z);
   S = z_diff.cwiseProduct(weights_.transpose().replicate(n_z, 1)) *
-    z_diff.transpose() + R;
+    z_diff.transpose() + R_radar;
   
-  // TODO: Perform more efficient angle normalization for Xsig_pred - x (3)
   MatrixXd x_diff = Xsig_pred_.colwise() - x_;
   for (int i = 0; i < x_diff.cols(); i++)
   {
+    // TODO: Perform more efficient angle normalization for Xsig_pred - x (3)
     x_diff(3, i) = normalizeAngle(x_diff(3, i));
   }
   
@@ -377,5 +399,5 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
   x_(3) = normalizeAngle(x_(3));
   
   NIS_radar_ = (z - z_pred).transpose() * S.inverse() *
-  (z - z_pred);
+    (z - z_pred);
 }
