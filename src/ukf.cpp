@@ -279,8 +279,8 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
   // Measurement covariance matrix for laser
   MatrixXd R_laser = MatrixXd(2, 2);
   R_laser <<
-  pow(std_laspx_, 2),                  0,
-  0,                  pow(std_laspy_, 2);
+    pow(std_laspx_, 2),                  0,
+    0,                  pow(std_laspy_, 2);
   
   // Calculate mean predicted measurement
   VectorXd z_pred = Zsig * weights_;
@@ -292,7 +292,7 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
   // Calculate measurement covariance matrix S
   MatrixXd S = MatrixXd(n_z, n_z);
   S = z_diff.cwiseProduct(weights_.transpose().replicate(n_z, 1)) *
-  z_diff.transpose() + R_laser;
+    z_diff.transpose() + R_laser;
   
   // Calculate differences between sigma points
   // and predicted measurement
@@ -305,7 +305,7 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
   
   // Calculate cross correlation matrix
   MatrixXd Tc = x_diff.cwiseProduct(weights_.transpose().replicate(n_x_, 1)) *
-  z_diff.transpose();
+    z_diff.transpose();
   
   // Calculate Kalman gain K;
   MatrixXd K = MatrixXd(n_x_, n_z);
