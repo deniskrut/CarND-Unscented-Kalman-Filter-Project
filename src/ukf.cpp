@@ -247,7 +247,11 @@ void UKF::Prediction(double delta_t) {
   
   x_(3) = normalizeAngle(x_(3));
   
-  MatrixXd x_diff = Xsig_pred_.colwise() - x_;
+  // Calculate the difference between predicted sigma points
+  // and mean
+  // This is a modification suggested by:
+  // https://www3.nd.edu/~lemmon/courses/ee67033/pubs/julier-ukf-tac-2000.pdf
+  MatrixXd x_diff = Xsig_pred_.colwise() - Xsig_pred_.col(0);
   
   // TODO: Perform more efficient angle normalization
   for (int i = 0; i < x_diff.cols(); i++)
@@ -286,8 +290,10 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
   VectorXd z_pred = Zsig * weights_;
   
   // Calculate differences between sigma points
-  // and mean predicted measurement in measurement space
-  MatrixXd z_diff = Zsig.colwise() - z_pred;
+  // and mean measurement in measurement space
+  // This is a modification suggested by:
+  // https://www3.nd.edu/~lemmon/courses/ee67033/pubs/julier-ukf-tac-2000.pdf
+  MatrixXd z_diff = Zsig.colwise() - Zsig.col(0);
   
   // Calculate measurement covariance matrix S
   MatrixXd S = MatrixXd(n_z, n_z);
@@ -295,8 +301,10 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
     z_diff.transpose() + R_laser;
   
   // Calculate differences between sigma points
-  // and predicted measurement
-  MatrixXd x_diff = Xsig_pred_.colwise() - x_;
+  // and mean
+  // This is a modification suggested by:
+  // https://www3.nd.edu/~lemmon/courses/ee67033/pubs/julier-ukf-tac-2000.pdf
+  MatrixXd x_diff = Xsig_pred_.colwise() - Xsig_pred_.col(0);
   for (int i = 0; i < x_diff.cols(); i++)
   {
     // TODO: Perform more efficient angle normalization for Xsig_pred - x (3)
@@ -364,7 +372,12 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
     0.,                pow(std_radphi_, 2), 0.,
     0.,                0.,                  pow(std_radrd_, 2);
   
-  MatrixXd z_diff = Zsig.colwise() - z_pred;
+  
+  // Calculate differences between sigma points
+  // and mean measurement in measurement space
+  // This is a modification suggested by:
+  // https://www3.nd.edu/~lemmon/courses/ee67033/pubs/julier-ukf-tac-2000.pdf
+  MatrixXd z_diff = Zsig.colwise() - Zsig.col(0);
   for (int i = 0; i < z_diff.cols(); i++)
   {
     // TODO: Perform more efficient angle normalization for Zsig - z_pred (1)
@@ -376,7 +389,11 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
   S = z_diff.cwiseProduct(weights_.transpose().replicate(n_z, 1)) *
     z_diff.transpose() + R_radar;
   
-  MatrixXd x_diff = Xsig_pred_.colwise() - x_;
+  // Calculate differences between sigma points
+  // and mean
+  // This is a modification suggested by:
+  // https://www3.nd.edu/~lemmon/courses/ee67033/pubs/julier-ukf-tac-2000.pdf
+  MatrixXd x_diff = Xsig_pred_.colwise() - Xsig_pred_.col(0);
   for (int i = 0; i < x_diff.cols(); i++)
   {
     // TODO: Perform more efficient angle normalization for Xsig_pred - x (3)
