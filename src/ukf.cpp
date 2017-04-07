@@ -160,7 +160,14 @@ void UKF::Prediction(double delta_t) {
   MatrixXd Xsig = MatrixXd(n_x_, 2 * n_x_ + 1);
   
   // Calculate square root of P
-  MatrixXd A = P_.llt().matrixL();
+  Eigen::LLT<MatrixXd> P_llt(P_);
+  if (P_llt.info() == Eigen::NumericalIssue) {
+    // if decomposition fails, we have numerical issues
+    std::cout << "LLT failed!" << std::endl;
+    std::cout << "P_:" << std::endl << P_ << std::endl;
+    throw std::range_error("LLT failed");
+  }
+  MatrixXd A = P_llt.matrixL();
   
   // Calculate sigma points ...
   // Set sigma points as columns of matrix Xsig
@@ -189,8 +196,15 @@ void UKF::Prediction(double delta_t) {
   P_aug.bottomRightCorner(n_aug_ - n_x_, n_aug_ - n_x_) <<
     pow(std_a_, 2), 0., 0., pow(std_yawdd_, 2);
   
-  // Create square root matrix
-  MatrixXd A_aug = P_aug.llt().matrixL();
+  // Calculate square root of P_aug
+  Eigen::LLT<MatrixXd> P_aug_llt(P_aug);
+  if (P_aug_llt.info() == Eigen::NumericalIssue) {
+    // if decomposition fails, we have numerical issues
+    std::cout << "LLT failed!" << std::endl;
+    std::cout << "P_aug:" << std::endl << P_aug << std::endl;
+    throw std::range_error("LLT failed");
+  }
+  MatrixXd A_aug = P_aug_llt.matrixL();
   
   // Create augmented sigma points
   Xsig_aug.col(0) = x_aug;
