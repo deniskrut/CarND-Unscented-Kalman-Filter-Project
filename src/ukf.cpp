@@ -44,10 +44,10 @@ UKF::UKF() {
   P_ = MatrixXd(n_x_, n_x_);
 
   // Process noise standard deviation longitudinal acceleration in m/s^2
-  std_a_ = 5;
+  std_a_ = 5 / 3;
 
   // Process noise standard deviation yaw acceleration in rad/s^2
-  std_yawdd_ = M_PI_2;
+  std_yawdd_ = M_PI_2 / 3;
 
   // Laser measurement noise standard deviation position1 in m
   std_laspx_ = 0.15;
@@ -66,11 +66,11 @@ UKF::UKF() {
   
   // Assign initial covariance matrix
   P_ <<
-    pow(5, 2),         0,          0,            0,              0,
-            0, pow(5, 2),          0,            0,              0,
-            0,         0, pow(10, 2),            0,              0,
-            0,         0,          0, pow(M_PI, 2),              0,
-            0,         0,          0,            0, pow(M_PI_2, 2);
+    pow(5 / 2, 2), 0, 0, 0, 0,
+    0, pow(5 / 2, 2), 0, 0, 0,
+    0, 0, pow(10 / 2, 2), 0, 0,
+    0, 0, 0, pow(M_PI / 2, 2), 0,
+    0, 0, 0, 0, pow(M_PI_2 / 2, 2);
   
   // Initialize predicted sigma points matrix
   Xsig_pred_ = MatrixXd(n_x_, 2 * n_aug_ + 1);
