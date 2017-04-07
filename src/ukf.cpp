@@ -184,6 +184,7 @@ void UKF::Prediction(double delta_t) {
   x_aug.tail(n_aug_ - n_x_) << 0., 0.;
   
   // Create augmented covariance matrix
+  P_aug.fill(0.);
   P_aug.topLeftCorner(n_x_, n_x_) = P_;
   P_aug.bottomRightCorner(n_aug_ - n_x_, n_aug_ - n_x_) <<
     pow(std_a_, 2), 0., 0., pow(std_yawdd_, 2);
