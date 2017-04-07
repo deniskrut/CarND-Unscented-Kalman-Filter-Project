@@ -266,7 +266,7 @@ void UKF::Prediction(double delta_t) {
   // and predicted state
   MatrixXd x_diff = Xsig_pred_.colwise() - x_;
   
-  // TODO: Perform more efficient angle normalization
+  // Normalize yaw to be between -pi and pi
   for (int i = 0; i < x_diff.cols(); i++)
   {
     x_diff(3, i) = normalizeAngle(x_diff(3, i));
@@ -314,9 +314,10 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
   // Calculate differences between sigma points
   // and predicted state
   MatrixXd x_diff = Xsig_pred_.colwise() - x_;
+  
+  // Normalize yaw to be between -pi and pi
   for (int i = 0; i < x_diff.cols(); i++)
   {
-    // TODO: Perform more efficient angle normalization for Xsig_pred - x (3)
     x_diff(3, i) = normalizeAngle(x_diff(3, i));
   }
   
@@ -357,8 +358,7 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
 
   ArrayXd sqrt_px_2_plus_py_2 = (px.pow(2) + py.pow(2)).sqrt();
   Zsig.row(0) = sqrt_px_2_plus_py_2;
-  // TODO: Replace with more efficient atan2 implementation
-  for (int i = 0; i < 2 * n_aug_ + 1; i++) {  // 2n+1 simga points
+  for (int i = 0; i < 2 * n_aug_ + 1; i++) {
     // Extract values for better readibility
     double p_x = Xsig_pred_(0,i);
     double p_y = Xsig_pred_(1,i);
@@ -385,9 +385,10 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
   // Calculate differences between sigma points
   // and predicted measurement in measurement space
   MatrixXd z_diff = Zsig.colwise() - z_pred;
+  
+  // Normalize phi to be between -pi and pi
   for (int i = 0; i < z_diff.cols(); i++)
   {
-    // TODO: Perform more efficient angle normalization for Zsig - z_pred (1)
     z_diff(1, i) = normalizeAngle(z_diff(1, i));
   }
   
@@ -399,9 +400,10 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
   // Calculate differences between sigma points
   // and predicted measurement
   MatrixXd x_diff = Xsig_pred_.colwise() - x_;
+  
+  // Normalize yaw to be between -pi and pi
   for (int i = 0; i < x_diff.cols(); i++)
   {
-    // TODO: Perform more efficient angle normalization for Xsig_pred - x (3)
     x_diff(3, i) = normalizeAngle(x_diff(3, i));
   }
   
